@@ -84,20 +84,10 @@ export function ChatPanel({
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
-  // Compute conversation key for current context
-  const currentConversationKey = [...contextSections].sort().join(",");
-
-  // Check if there's history for current context
-  const currentHistory = currentConversationKey
-    ? sectionConversations[currentConversationKey]
-    : null;
-  const hasHistoryForContext = currentHistory && currentHistory.length > 0;
-  const showHistoryBanner = hasHistoryForContext && messages.length === 0 && !bannerDismissed;
-
-  // Check if there's any history at all
-  const hasAnyHistory = Object.values(sectionConversations).some(
-    (msgs) => msgs && msgs.length > 0
-  );
+  // Get conversation history (single conversation per plan, keyed as "main")
+  const conversationHistory = sectionConversations["main"] || [];
+  const hasHistory = conversationHistory.length > 0;
+  const showHistoryBanner = hasHistory && messages.length === 0 && !bannerDismissed;
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -111,14 +101,10 @@ export function ChatPanel({
     setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
 
-  // Reset banner dismissed state when context changes
-  useEffect(() => {
-    setBannerDismissed(false);
-  }, [currentConversationKey]);
 
   const loadHistory = () => {
-    if (currentHistory) {
-      const loadedMessages: Message[] = currentHistory.map((msg, i) => ({
+    if (conversationHistory.length > 0) {
+      const loadedMessages: Message[] = conversationHistory.map((msg, i) => ({
         id: `history-${i}`,
         role: msg.role,
         content: msg.content,
@@ -223,7 +209,7 @@ export function ChatPanel({
           <Sparkles className="w-5 h-5 text-red-500" />
           <span className="font-semibold">AI Assistant</span>
         </div>
-        {hasAnyHistory && (
+        {hasHistory && (
           <Button
             variant="ghost"
             size="icon"
@@ -243,7 +229,7 @@ export function ChatPanel({
             <div className="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
               <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
                 <MessageSquare className="w-4 h-4" />
-                <span>{currentHistory!.length} previous messages</span>
+                <span>{conversationHistory.length} previous messages</span>
               </div>
               <div className="flex items-center gap-1">
                 <Button

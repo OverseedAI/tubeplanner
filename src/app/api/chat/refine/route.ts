@@ -104,11 +104,10 @@ GUIDELINES:
     system: systemPrompt,
     messages,
     async onFinish({ text }) {
-      // Save the conversation with context sections info
-      const conversationKey = contextSections.sort().join(",");
+      // Save to single conversation (keyed as "main")
       const updatedConversations = {
         ...(plan.sectionConversations || {}),
-        [conversationKey]: [
+        main: [
           ...messages,
           { role: "assistant", content: text, createdAt: new Date().toISOString() },
         ],

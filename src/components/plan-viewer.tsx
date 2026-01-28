@@ -342,11 +342,13 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
         >
           <ChatPanel
             planId={plan.id}
+            planTitle={plan.title}
             contextSections={contextSections}
             onRemoveContext={handleRemoveContext}
             messages={messages}
             onMessagesChange={setMessages}
             onApply={handleApply}
+            sectionConversations={plan.sectionConversations || {}}
           />
         </div>
       </div>

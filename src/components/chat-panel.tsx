@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ContextTag } from "@/components/context-tag";
+import { ConversationHistoryModal } from "@/components/conversation-history-modal";
 import {
   Loader2,
   Send,
@@ -18,6 +19,9 @@ import {
   List,
   Image,
   Type,
+  History,
+  MessageSquare,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +31,13 @@ export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+}
+
+// DB message type (without id)
+interface DbMessage {
+  role: "user" | "assistant";
+  content: string;
+  createdAt?: string;
 }
 
 interface SectionConfig {
@@ -46,26 +57,47 @@ const sectionConfigs: SectionConfig[] = [
 
 interface ChatPanelProps {
   planId: string;
+  planTitle: string;
   contextSections: SectionKey[];
   onRemoveContext: (key: SectionKey) => void;
   messages: Message[];
   onMessagesChange: (messages: Message[]) => void;
   onApply: (sectionKey: SectionKey, content: string) => void;
+  sectionConversations: Record<string, DbMessage[]>;
 }
 
 export function ChatPanel({
   planId,
+  planTitle,
   contextSections,
   onRemoveContext,
   messages,
   onMessagesChange,
   onApply,
+  sectionConversations,
 }: ChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [lastAssistantContent, setLastAssistantContent] = useState<string | null>(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Compute conversation key for current context
+  const currentConversationKey = [...contextSections].sort().join(",");
+
+  // Check if there's history for current context
+  const currentHistory = currentConversationKey
+    ? sectionConversations[currentConversationKey]
+    : null;
+  const hasHistoryForContext = currentHistory && currentHistory.length > 0;
+  const showHistoryBanner = hasHistoryForContext && messages.length === 0 && !bannerDismissed;
+
+  // Check if there's any history at all
+  const hasAnyHistory = Object.values(sectionConversations).some(
+    (msgs) => msgs && msgs.length > 0
+  );
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -78,6 +110,23 @@ export function ChatPanel({
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
+
+  // Reset banner dismissed state when context changes
+  useEffect(() => {
+    setBannerDismissed(false);
+  }, [currentConversationKey]);
+
+  const loadHistory = () => {
+    if (currentHistory) {
+      const loadedMessages: Message[] = currentHistory.map((msg, i) => ({
+        id: `history-${i}`,
+        role: msg.role,
+        content: msg.content,
+      }));
+      onMessagesChange(loadedMessages);
+      setBannerDismissed(true);
+    }
+  };
 
   const sendMessage = useCallback(
     async (userMessage: string) => {
@@ -169,16 +218,56 @@ export function ChatPanel({
   return (
     <div className="w-[380px] min-w-[380px] border-l border-zinc-200 dark:border-zinc-800 flex flex-col bg-white dark:bg-zinc-950 h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2">
-        <Sparkles className="w-5 h-5 text-red-500" />
-        <span className="font-semibold">AI Assistant</span>
+      <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-red-500" />
+          <span className="font-semibold">AI Assistant</span>
+        </div>
+        {hasAnyHistory && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setHistoryModalOpen(true)}
+          >
+            <History className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
       <ScrollArea ref={scrollRef} className="flex-1 px-4">
         <div className="space-y-4 py-4">
+          {/* History banner - Option B */}
+          {showHistoryBanner && (
+            <div className="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                <MessageSquare className="w-4 h-4" />
+                <span>{currentHistory!.length} previous messages</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={loadHistory}
+                >
+                  Load
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setBannerDismissed(true)}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Empty state */}
-          {messages.length === 0 && (
+          {messages.length === 0 && !showHistoryBanner && (
             <div className="text-center py-8 text-zinc-500">
               {contextSections.length === 0 ? (
                 <p>Click &quot;Enhance&quot; on a section to add it as context</p>
@@ -337,6 +426,14 @@ export function ChatPanel({
           </Button>
         </form>
       </div>
+
+      {/* History Modal - Option A */}
+      <ConversationHistoryModal
+        open={historyModalOpen}
+        onOpenChange={setHistoryModalOpen}
+        conversations={sectionConversations}
+        planTitle={planTitle}
+      />
     </div>
   );
 }

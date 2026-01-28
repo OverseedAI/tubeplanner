@@ -76,7 +76,7 @@ export function ChatPanel({
   onApply,
   sectionConversations,
 }: ChatPanelProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -91,8 +91,9 @@ export function ChatPanel({
 
   // Auto-scroll on new messages
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const viewport = scrollAreaRef.current?.querySelector('[data-slot="scroll-area-viewport"]');
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
     }
   }, [messages]);
 
@@ -188,6 +189,8 @@ export function ChatPanel({
     const userInput = input;
     setInput("");
     sendMessage(userInput);
+    // Keep focus on input after submit
+    inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -222,7 +225,7 @@ export function ChatPanel({
       </div>
 
       {/* Messages */}
-      <ScrollArea ref={scrollRef} className="flex-1 px-4">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
         <div className="space-y-4 py-4">
           {/* History banner - Option B */}
           {showHistoryBanner && (

@@ -2,17 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { LayoutDashboard, Plus, LogOut, Youtube } from "lucide-react";
+import { LayoutDashboard, Plus, Youtube } from "lucide-react";
 
 interface SidebarProps {
   user: {
@@ -78,31 +77,23 @@ export function Sidebar({ user }: SidebarProps) {
         <div className="flex flex-col gap-2 items-center">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-10 h-10 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-                onClick={() => signOut({ callbackUrl: "/login" })}
-              >
-                <LogOut className="w-5 h-5" />
-              </Button>
+              <Link href="/profile">
+                <Avatar
+                  className={cn(
+                    "w-9 h-9 cursor-pointer ring-2 ring-transparent transition-all hover:ring-zinc-300 dark:hover:ring-zinc-600",
+                    pathname === "/profile" &&
+                      "ring-red-500 dark:ring-red-500"
+                  )}
+                >
+                  <AvatarImage src={user.image ?? undefined} />
+                  <AvatarFallback className="text-xs bg-zinc-100 dark:bg-zinc-800">
+                    {user.name?.[0] ?? user.email?.[0] ?? "?"}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p>Sign out</p>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Avatar className="w-9 h-9 cursor-pointer">
-                <AvatarImage src={user.image ?? undefined} />
-                <AvatarFallback className="text-xs bg-zinc-100 dark:bg-zinc-800">
-                  {user.name?.[0] ?? user.email?.[0] ?? "?"}
-                </AvatarFallback>
-              </Avatar>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>{user.name ?? user.email}</p>
+              <p>Profile</p>
             </TooltipContent>
           </Tooltip>
         </div>

@@ -116,8 +116,6 @@ export function ChatPanel({
 
   const sendMessage = useCallback(
     async (userMessage: string) => {
-      if (contextSections.length === 0) return;
-
       setIsLoading(true);
 
       const userMsg: Message = {
@@ -259,16 +257,10 @@ export function ChatPanel({
           {/* Empty state */}
           {messages.length === 0 && !showHistoryBanner && (
             <div className="text-center py-8 text-zinc-500">
-              {contextSections.length === 0 ? (
-                <p>Click &quot;Enhance&quot; on a section to add it as context</p>
-              ) : (
-                <>
-                  <p>How would you like to enhance these sections?</p>
-                  <p className="text-sm mt-1">
-                    Try: &quot;Make it more engaging&quot; or &quot;Add specific examples&quot;
-                  </p>
-                </>
-              )}
+              <p>Ask me anything about your video plan</p>
+              <p className="text-sm mt-1">
+                Use &quot;Enhance&quot; buttons to focus on specific sections
+              </p>
             </div>
           )}
 
@@ -394,18 +386,14 @@ export function ChatPanel({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={
-              contextSections.length === 0
-                ? "Add sections to enhance..."
-                : "Ask AI to enhance..."
-            }
+            placeholder="Ask AI to help with your video plan..."
             className="min-h-[44px] max-h-[100px] resize-none flex-1"
-            disabled={isLoading || contextSections.length === 0}
+            disabled={isLoading}
           />
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || isLoading || contextSections.length === 0}
+            disabled={!input.trim() || isLoading}
             className="h-[44px] w-[44px] bg-red-500 hover:bg-red-600"
           >
             {isLoading ? (

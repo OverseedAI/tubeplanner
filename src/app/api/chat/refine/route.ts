@@ -30,11 +30,15 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const { planId, contextSections, messages } = await req.json();
+  const { planId, contextSections = [], messages } = await req.json();
 
-  if (!planId || !contextSections || !Array.isArray(contextSections) || contextSections.length === 0 || !messages) {
+  if (!planId || !messages) {
     return new Response("Missing required fields", { status: 400 });
   }
+
+  // If no sections specified, include all sections
+  const allSections = ["idea", "targetAudience", "hook", "outline", "thumbnailConcepts", "titleOptions"];
+  const sectionsToInclude = contextSections.length > 0 ? contextSections : allSections;
 
   // Get user's Anthropic client
   let anthropic;
@@ -66,8 +70,8 @@ export async function POST(req: Request) {
   const userContext = await getUserContext(session.user.id);
   const creatorContext = buildCreatorContextPrompt(userContext);
 
-  // Build context for selected sections
-  const sectionsContext = contextSections.map((section: string) => {
+  // Build context for sections
+  const sectionsContext = sectionsToInclude.map((section: string) => {
     const label = SECTION_LABELS[section] || section;
     const content = plan[section as keyof typeof plan];
     const contentStr = Array.isArray(content)
@@ -76,18 +80,19 @@ export async function POST(req: Request) {
     return `## ${label}\n${contentStr}`;
   }).join("\n\n");
 
-  const sectionDescriptions = contextSections.map(
-    (s: string) => SECTION_PROMPTS[s] || s
-  ).join(", ");
+  const hasSpecificSections = contextSections.length > 0;
+  const sectionDescriptions = hasSpecificSections
+    ? contextSections.map((s: string) => SECTION_PROMPTS[s] || s).join(", ")
+    : "the entire video plan";
 
-  const systemPrompt = `You are a YouTube video planning assistant. You're helping refine: ${sectionDescriptions}.
+  const systemPrompt = `You are a YouTube video planning assistant helping with: ${sectionDescriptions}.
 
 ${creatorContext}
 
 CURRENT VIDEO PLAN:
 - Title: ${plan.title}
 
-SECTIONS IN CONTEXT:
+PLAN SECTIONS:
 ${sectionsContext}
 
 GUIDELINES:
@@ -96,7 +101,8 @@ GUIDELINES:
 - Consider how sections relate to each other and the overall video plan
 - If asked to rewrite or change something, output the COMPLETE new version (not just the changes)
 - Keep responses focused and practical
-- When you provide updated content, format it clearly so the user can easily apply it`;
+- When you provide updated content, format it clearly so the user can easily apply it
+${!hasSpecificSections ? "- If the user's request relates to specific sections, identify which sections would be affected and provide updates for those" : ""}`;
 
   // Stream the response
   const result = streamText({

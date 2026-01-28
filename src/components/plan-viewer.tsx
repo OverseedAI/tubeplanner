@@ -159,6 +159,10 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
     await saveSection(sectionKey, parsedValue);
   };
 
+  const handleConversationUpdate = (conversations: Record<string, { role: "user" | "assistant"; content: string; createdAt?: string }[]>) => {
+    setPlan((prev) => ({ ...prev, sectionConversations: conversations }));
+  };
+
   const renderSectionContent = (key: SectionKey) => {
     const value = plan[key];
 
@@ -349,6 +353,7 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
             onMessagesChange={setMessages}
             onApply={handleApply}
             sectionConversations={plan.sectionConversations || {}}
+            onConversationUpdate={handleConversationUpdate}
           />
         </div>
       </div>

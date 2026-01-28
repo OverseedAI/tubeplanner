@@ -64,6 +64,7 @@ interface ChatPanelProps {
   onMessagesChange: (messages: Message[]) => void;
   onApply: (sectionKey: SectionKey, content: string) => void;
   sectionConversations: Record<string, DbMessage[]>;
+  onConversationUpdate?: (conversations: Record<string, DbMessage[]>) => void;
 }
 
 export function ChatPanel({
@@ -75,6 +76,7 @@ export function ChatPanel({
   onMessagesChange,
   onApply,
   sectionConversations,
+  onConversationUpdate,
 }: ChatPanelProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -174,13 +176,25 @@ export function ChatPanel({
         }
 
         setLastAssistantContent(assistantContent);
+
+        // Update parent with new conversation state
+        if (onConversationUpdate) {
+          const finalMessages = [
+            ...updatedMessages.map((m) => ({ role: m.role, content: m.content })),
+            { role: "assistant" as const, content: assistantContent, createdAt: new Date().toISOString() },
+          ];
+          onConversationUpdate({
+            ...sectionConversations,
+            main: finalMessages,
+          });
+        }
       } catch (err) {
         console.error("Chat error:", err);
       } finally {
         setIsLoading(false);
       }
     },
-    [messages, planId, contextSections, onMessagesChange]
+    [messages, planId, contextSections, onMessagesChange, onConversationUpdate, sectionConversations]
   );
 
   const onSubmit = (e: React.FormEvent) => {

@@ -15,7 +15,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { FileVideo, Trash2, Loader2 } from "lucide-react";
 
@@ -106,19 +105,18 @@ export function PlanCard({ plan }: PlanCardProps) {
           </span>
 
           <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </AlertDialogTrigger>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDialogOpen(true);
+              }}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete video plan?</AlertDialogTitle>

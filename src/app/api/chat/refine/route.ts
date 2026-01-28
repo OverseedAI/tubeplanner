@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { videoPlans } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { getUserContext, buildCreatorContextPrompt } from "@/lib/user-context";
 
 const SECTION_PROMPTS: Record<string, string> = {
   idea: "You're helping refine the core video idea and value proposition.",
@@ -38,6 +39,10 @@ export async function POST(req: Request) {
     return new Response("Plan not found", { status: 404 });
   }
 
+  // Fetch creator context for personalization
+  const userContext = await getUserContext(session.user.id);
+  const creatorContext = buildCreatorContextPrompt(userContext);
+
   // Build context from current plan state
   const planContext = `
 CURRENT VIDEO PLAN STATE:
@@ -56,7 +61,7 @@ ${plan[section as keyof typeof plan] || "Empty"}
   const sectionContext = SECTION_PROMPTS[section] || "You're helping refine this section.";
 
   const systemPrompt = `You are a YouTube video planning assistant. ${sectionContext}
-
+${creatorContext}
 ${planContext}
 
 GUIDELINES:

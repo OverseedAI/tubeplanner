@@ -18,6 +18,8 @@ export const users = pgTable("users", {
   emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  // Creator context for AI personalization
+  userContext: text("user_context"),
 });
 
 export const accounts = pgTable(

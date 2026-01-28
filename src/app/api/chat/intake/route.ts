@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { videoPlans } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { getUserContext, buildCreatorContextPrompt } from "@/lib/user-context";
 
 const SYSTEM_PROMPT = `You are a YouTube video planning assistant. Your job is to help creators plan compelling, well-structured videos that resonate with their audience.
 
@@ -31,6 +32,10 @@ export async function POST(req: Request) {
   }
 
   const { messages, planId } = await req.json();
+
+  // Fetch creator context for personalization
+  const userContext = await getUserContext(session.user.id);
+  const creatorContext = buildCreatorContextPrompt(userContext);
 
   let currentPlanId = planId;
   let plan;
@@ -72,9 +77,14 @@ export async function POST(req: Request) {
   ).length;
   const shouldGenerate = userMessageCount >= 3;
 
+  // Build the full system prompt with creator context
+  const basePrompt = creatorContext
+    ? `${SYSTEM_PROMPT}\n${creatorContext}`
+    : SYSTEM_PROMPT;
+
   // Update the system prompt to include generation instruction if ready
   const systemPrompt = shouldGenerate
-    ? `${SYSTEM_PROMPT}
+    ? `${basePrompt}
 
 IMPORTANT: You now have enough information. In your response:
 1. Briefly acknowledge their final answer
@@ -82,7 +92,7 @@ IMPORTANT: You now have enough information. In your response:
 3. End your message with: [PLAN_GENERATED][PLAN_ID:${currentPlanId}]
 
 This will trigger the plan generation and redirect them to view it.`
-    : SYSTEM_PROMPT;
+    : basePrompt;
 
   // Stream the response
   const result = streamText({
@@ -98,7 +108,7 @@ This will trigger the plan generation and redirect them to view it.`
 
       // If plan was generated, also generate the actual plan content
       if (text.includes("[PLAN_GENERATED]")) {
-        await generatePlanContent(currentPlanId, session.user!.id!, updatedMessages);
+        await generatePlanContent(currentPlanId, session.user!.id!, updatedMessages, userContext);
       }
 
       await db
@@ -120,17 +130,22 @@ This will trigger the plan generation and redirect them to view it.`
 async function generatePlanContent(
   planId: string,
   userId: string,
-  messages: { role: string; content: string }[]
+  messages: { role: string; content: string }[],
+  userContext: string | null
 ) {
   const conversationContext = messages
     .map((m) => `${m.role}: ${m.content}`)
     .join("\n");
 
+  const creatorContextSection = userContext?.trim()
+    ? `\nCREATOR CONTEXT:\n${userContext}\n\nUse this context to tailor the plan to match the creator's style and audience.`
+    : "";
+
   const { text } = await import("ai").then((m) =>
     m.generateText({
       model: anthropic("claude-sonnet-4-20250514"),
       system: `You are a YouTube video planning expert. Based on the intake conversation, generate a comprehensive video plan.
-
+${creatorContextSection}
 Output a JSON object with this exact structure:
 {
   "title": "Working title for the video",

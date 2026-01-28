@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { VideoPlan, OutlineItem } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RefineDialog } from "@/components/refine-dialog";
 import {
   Lightbulb,
   Users,
@@ -47,11 +47,11 @@ const sections: {
 ];
 
 export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
-  const router = useRouter();
   const [plan, setPlan] = useState(initialPlan);
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [refineSection, setRefineSection] = useState<SectionKey | null>(null);
 
   const startEditing = (key: SectionKey) => {
     const value = plan[key];
@@ -70,44 +70,81 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
     setEditValue("");
   };
 
-  const saveEdit = async () => {
-    if (!editingSection) return;
-
+  const saveSection = async (key: SectionKey, newValue: unknown) => {
     setSaving(true);
     try {
-      let newValue: string | string[] | { id: string; title: string; content: string; duration?: string }[];
-
-      if (editingSection === "titleOptions" || editingSection === "thumbnailConcepts") {
-        newValue = editValue.split("\n").filter(Boolean);
-      } else if (editingSection === "outline") {
-        newValue = editValue.split("\n").filter(Boolean).map((line, i) => {
-          const [title, ...contentParts] = line.split(":");
-          return {
-            id: String(i + 1),
-            title: title.trim(),
-            content: contentParts.join(":").trim() || title.trim(),
-          };
-        });
-      } else {
-        newValue = editValue;
-      }
-
       const response = await fetch(`/api/plans/${plan.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [editingSection]: newValue }),
+        body: JSON.stringify({ [key]: newValue }),
       });
 
       if (!response.ok) throw new Error("Failed to save");
 
-      setPlan((prev) => ({ ...prev, [editingSection]: newValue }));
-      setEditingSection(null);
-      setEditValue("");
+      setPlan((prev) => ({ ...prev, [key]: newValue }));
+      return true;
     } catch (error) {
       console.error("Failed to save:", error);
+      return false;
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveEdit = async () => {
+    if (!editingSection) return;
+
+    let newValue: string | string[] | { id: string; title: string; content: string; duration?: string }[];
+
+    if (editingSection === "titleOptions" || editingSection === "thumbnailConcepts") {
+      newValue = editValue.split("\n").filter(Boolean);
+    } else if (editingSection === "outline") {
+      newValue = editValue.split("\n").filter(Boolean).map((line, i) => {
+        const [title, ...contentParts] = line.split(":");
+        return {
+          id: String(i + 1),
+          title: title.trim(),
+          content: contentParts.join(":").trim() || title.trim(),
+        };
+      });
+    } else {
+      newValue = editValue;
+    }
+
+    const success = await saveSection(editingSection, newValue);
+    if (success) {
+      setEditingSection(null);
+      setEditValue("");
+    }
+  };
+
+  const handleRefineApply = async (newContent: string) => {
+    if (!refineSection) return;
+
+    // Parse the content based on section type
+    let parsedValue: string | string[];
+    if (refineSection === "titleOptions" || refineSection === "thumbnailConcepts") {
+      // Split by newlines, filter empties, clean up numbering
+      parsedValue = newContent
+        .split("\n")
+        .map((line) => line.replace(/^\d+\.\s*/, "").trim())
+        .filter(Boolean);
+    } else {
+      parsedValue = newContent;
+    }
+
+    await saveSection(refineSection, parsedValue);
+  };
+
+  const getSectionContentAsString = (key: SectionKey): string => {
+    const value = plan[key];
+    if (!value) return "";
+    if (Array.isArray(value)) {
+      return value.map((item) =>
+        typeof item === "string" ? item : `${item.title}: ${item.content}`
+      ).join("\n");
+    }
+    return String(value);
   };
 
   const renderSectionContent = (key: SectionKey) => {
@@ -185,6 +222,8 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
     return <p className="whitespace-pre-wrap leading-relaxed">{value}</p>;
   };
 
+  const currentRefineSection = sections.find((s) => s.key === refineSection);
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -208,10 +247,6 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
               Created {new Date(plan.createdAt).toLocaleDateString()}
             </p>
           </div>
-          <Button variant="outline" className="gap-2">
-            <Sparkles className="w-4 h-4" />
-            Regenerate All
-          </Button>
         </div>
       </div>
 
@@ -242,7 +277,11 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
                           <Edit3 className="w-4 h-4 mr-1" />
                           Edit
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setRefineSection(section.key)}
+                        >
                           <Sparkles className="w-4 h-4 mr-1" />
                           Refine
                         </Button>
@@ -259,6 +298,17 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
           </div>
         </div>
       </ScrollArea>
+
+      {/* Refine Dialog */}
+      <RefineDialog
+        open={refineSection !== null}
+        onOpenChange={(open) => !open && setRefineSection(null)}
+        planId={plan.id}
+        section={refineSection || ""}
+        sectionLabel={currentRefineSection?.label || ""}
+        currentContent={refineSection ? getSectionContentAsString(refineSection) : ""}
+        onApply={handleRefineApply}
+      />
     </div>
   );
 }

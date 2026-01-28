@@ -24,10 +24,12 @@ import {
   Loader2,
   PanelRightClose,
   PanelRightOpen,
+  History,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ApiKeyModal } from "@/components/api-key-modal";
+import { ConversationHistoryModal } from "@/components/conversation-history-modal";
 
 interface PlanViewerProps {
   plan: VideoPlan;
@@ -62,6 +64,13 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [contextSections, setContextSections] = useState<SectionKey[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+
+  // History modal state
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const intakeMessages = plan.intakeMessages || [];
+  const refinementMessages = plan.sectionConversations?.["main"] || [];
+  const conversationHistory = [...intakeMessages, ...refinementMessages];
+  const hasHistory = conversationHistory.length > 0;
 
   const startEditing = (key: SectionKey) => {
     const value = plan[key];
@@ -267,19 +276,33 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
             </p>
           </div>
 
-          {/* Toggle chat panel button */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIsPanelOpen(!isPanelOpen)}
-            className="h-10 w-10"
-          >
-            {isPanelOpen ? (
-              <PanelRightClose className="w-5 h-5" />
-            ) : (
-              <PanelRightOpen className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            {/* History button */}
+            {hasHistory && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setHistoryModalOpen(true)}
+                className="h-10 w-10"
+              >
+                <History className="w-5 h-5" />
+              </Button>
             )}
-          </Button>
+
+            {/* Toggle chat panel button */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsPanelOpen(!isPanelOpen)}
+              className="h-10 w-10"
+            >
+              {isPanelOpen ? (
+                <PanelRightClose className="w-5 h-5" />
+              ) : (
+                <PanelRightOpen className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -340,13 +363,12 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
         {/* Chat Panel - slides in/out */}
         <div
           className={cn(
-            "shrink-0 transition-all duration-300 ease-in-out overflow-hidden",
+            "shrink-0 transition-all duration-300 ease-in-out overflow-hidden h-full",
             isPanelOpen ? "w-[380px]" : "w-0"
           )}
         >
           <ChatPanel
             planId={plan.id}
-            planTitle={plan.title}
             contextSections={contextSections}
             onRemoveContext={handleRemoveContext}
             messages={messages}
@@ -358,6 +380,14 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
           />
         </div>
       </div>
+
+      {/* Conversation History Modal */}
+      <ConversationHistoryModal
+        open={historyModalOpen}
+        onOpenChange={setHistoryModalOpen}
+        messages={conversationHistory}
+        planTitle={plan.title}
+      />
     </div>
   );
 }

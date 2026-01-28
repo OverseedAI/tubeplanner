@@ -65,8 +65,8 @@ export function ConversationHistoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle>Conversation History</DialogTitle>
             <div className="flex gap-2">
@@ -96,7 +96,7 @@ export function ConversationHistoryModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <ScrollArea className="flex-1 min-h-0 pr-4">
           {messages.length === 0 ? (
             <div className="text-center py-12 text-zinc-500">
               <p>No conversation history yet</p>
@@ -105,7 +105,7 @@ export function ConversationHistoryModal({
               </p>
             </div>
           ) : (
-            <div className="space-y-3 pb-4">
+            <div className="space-y-3 py-4">
               {messages.map((message, i) => (
                 <div
                   key={i}

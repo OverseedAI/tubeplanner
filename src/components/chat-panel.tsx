@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ContextTag } from "@/components/context-tag";
-import { ConversationHistoryModal } from "@/components/conversation-history-modal";
 import {
   Loader2,
   Send,
@@ -19,7 +18,6 @@ import {
   List,
   Image,
   Type,
-  History,
   MessageSquare,
   X,
 } from "lucide-react";
@@ -57,7 +55,6 @@ const sectionConfigs: SectionConfig[] = [
 
 interface ChatPanelProps {
   planId: string;
-  planTitle: string;
   contextSections: SectionKey[];
   onRemoveContext: (key: SectionKey) => void;
   messages: Message[];
@@ -70,7 +67,6 @@ interface ChatPanelProps {
 
 export function ChatPanel({
   planId,
-  planTitle,
   contextSections,
   onRemoveContext,
   messages,
@@ -85,14 +81,12 @@ export function ChatPanel({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [lastAssistantContent, setLastAssistantContent] = useState<string | null>(null);
-  const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Unified conversation history: intake + refinement
   const refinementHistory = sectionConversations["main"] || [];
   const conversationHistory = [...intakeMessages, ...refinementHistory];
-  const hasHistory = conversationHistory.length > 0;
-  const showHistoryBanner = hasHistory && messages.length === 0 && !bannerDismissed;
+  const showHistoryBanner = conversationHistory.length > 0 && messages.length === 0 && !bannerDismissed;
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -224,21 +218,11 @@ export function ChatPanel({
   return (
     <div className="w-[380px] min-w-[380px] border-l border-zinc-200 dark:border-zinc-800 flex flex-col bg-white dark:bg-zinc-950 h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-red-500" />
           <span className="font-semibold">AI Assistant</span>
         </div>
-        {hasHistory && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setHistoryModalOpen(true)}
-          >
-            <History className="w-4 h-4" />
-          </Button>
-        )}
       </div>
 
       {/* Messages */}
@@ -432,14 +416,6 @@ export function ChatPanel({
           </Button>
         </form>
       </div>
-
-      {/* History Modal */}
-      <ConversationHistoryModal
-        open={historyModalOpen}
-        onOpenChange={setHistoryModalOpen}
-        messages={conversationHistory}
-        planTitle={planTitle}
-      />
     </div>
   );
 }

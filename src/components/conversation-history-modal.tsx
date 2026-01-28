@@ -96,7 +96,7 @@ export function ConversationHistoryModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 pr-4">
+        <ScrollArea className="flex-1 min-h-0 overflow-hidden pr-4">
           {messages.length === 0 ? (
             <div className="text-center py-12 text-zinc-500">
               <p>No conversation history yet</p>

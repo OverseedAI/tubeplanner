@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, Sparkles } from "lucide-react";
+import { Send, Sparkles, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApiKey } from "@/hooks/use-api-key";
 import { ApiKeyModal } from "@/components/api-key-modal";
@@ -304,6 +304,23 @@ export default function NewPlanPage() {
           {error && (
             <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-600 dark:text-red-400">
               {error}
+            </div>
+          )}
+
+          {/* Plan generating indicator */}
+          {isGeneratingPlan && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/50 dark:to-orange-950/50 border border-red-200 dark:border-red-800/50 rounded-xl">
+              <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  Generating your video plan...
+                </p>
+                <p className="text-xs text-zinc-500">
+                  This usually takes a few seconds
+                </p>
+              </div>
             </div>
           )}
         </div>

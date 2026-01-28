@@ -2,12 +2,13 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Send, Sparkles, User } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Send, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -16,22 +17,36 @@ interface Message {
   content: string;
 }
 
+function ThinkingIndicator() {
+  return (
+    <div className="flex items-center gap-1">
+      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" />
+    </div>
+  );
+}
+
 export default function NewPlanPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [planId, setPlanId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const user = session?.user;
 
   // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isThinking]);
 
   // Focus input on mount
   useEffect(() => {
@@ -41,6 +56,7 @@ export default function NewPlanPage() {
   const sendMessage = useCallback(
     async (userMessage: string) => {
       setIsLoading(true);
+      setIsThinking(true);
       setError(null);
 
       const userMsg: Message = {
@@ -86,33 +102,30 @@ export default function NewPlanPage() {
           content: "",
         };
 
-        setMessages((prev) => [...prev, assistantMsg]);
+        // First chunk received - stop showing thinking indicator
+        let firstChunkReceived = false;
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value);
-          // Parse SSE data
-          const lines = chunk.split("\n");
-          for (const line of lines) {
-            if (line.startsWith("0:")) {
-              // Text chunk - extract the JSON string
-              try {
-                const text = JSON.parse(line.slice(2));
-                assistantContent += text;
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMsg.id
-                      ? { ...m, content: assistantContent }
-                      : m
-                  )
-                );
-              } catch {
-                // Not valid JSON, skip
-              }
-            }
+          const chunk = decoder.decode(value, { stream: true });
+
+          if (!firstChunkReceived) {
+            firstChunkReceived = true;
+            setIsThinking(false);
+            setMessages((prev) => [...prev, assistantMsg]);
           }
+
+          // Plain text stream - just append
+          assistantContent += chunk;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsg.id
+                ? { ...m, content: assistantContent }
+                : m
+            )
+          );
         }
 
         // Check if plan was generated
@@ -125,6 +138,7 @@ export default function NewPlanPage() {
       } catch (err) {
         console.error("Chat error:", err);
         setError("Something went wrong. Please try again.");
+        setIsThinking(false);
       } finally {
         setIsLoading(false);
       }
@@ -200,28 +214,20 @@ export default function NewPlanPage() {
                 message.role === "user" && "flex-row-reverse"
               )}
             >
-              <Avatar
-                className={cn(
-                  "w-10 h-10 shrink-0",
-                  message.role === "assistant"
-                    ? "bg-red-500"
-                    : "bg-zinc-200 dark:bg-zinc-700"
-                )}
-              >
-                <AvatarFallback
-                  className={cn(
-                    message.role === "assistant"
-                      ? "bg-red-500 text-white"
-                      : "bg-zinc-200 dark:bg-zinc-700"
-                  )}
-                >
-                  {message.role === "assistant" ? (
+              {message.role === "assistant" ? (
+                <Avatar className="w-10 h-10 shrink-0 bg-red-500">
+                  <AvatarFallback className="bg-red-500 text-white">
                     <Sparkles className="w-5 h-5" />
-                  ) : (
-                    <User className="w-5 h-5" />
-                  )}
-                </AvatarFallback>
-              </Avatar>
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <Avatar className="w-10 h-10 shrink-0">
+                  <AvatarImage src={user?.image ?? undefined} />
+                  <AvatarFallback className="bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300">
+                    {user?.name?.[0] ?? user?.email?.[0] ?? "U"}
+                  </AvatarFallback>
+                </Avatar>
+              )}
 
               <div
                 className={cn(
@@ -238,17 +244,15 @@ export default function NewPlanPage() {
                   )}
                 >
                   <p className="whitespace-pre-wrap leading-relaxed">
-                    {displayContent(message.content) || (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    )}
+                    {displayContent(message.content) || <ThinkingIndicator />}
                   </p>
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Loading indicator (only when waiting for first chunk) */}
-          {isLoading && messages[messages.length - 1]?.role === "user" && (
+          {/* Thinking indicator (before first chunk arrives) */}
+          {isThinking && (
             <div className="flex gap-4">
               <Avatar className="w-10 h-10 bg-red-500 shrink-0">
                 <AvatarFallback className="bg-red-500 text-white">
@@ -256,7 +260,7 @@ export default function NewPlanPage() {
                 </AvatarFallback>
               </Avatar>
               <div className="bg-zinc-100 dark:bg-zinc-800 rounded-2xl px-4 py-3">
-                <Loader2 className="w-5 h-5 animate-spin text-zinc-400" />
+                <ThinkingIndicator />
               </div>
             </div>
           )}
@@ -288,11 +292,7 @@ export default function NewPlanPage() {
             disabled={!input.trim() || isLoading}
             className="absolute right-3 bottom-3 w-9 h-9 rounded-xl bg-red-500 hover:bg-red-600"
           >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
+            <Send className="w-4 h-4" />
           </Button>
         </form>
         <p className="text-xs text-zinc-400 text-center mt-3">

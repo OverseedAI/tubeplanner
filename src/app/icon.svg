@@ -1,0 +1,10 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="32" height="32" rx="8" fill="#ef4444"/>
+
+  <!-- Play button -->
+  <path d="M13 10.5V21.5C13 22.3 13.9 22.8 14.6 22.3L22.6 16.8C23.2 16.4 23.2 15.6 22.6 15.2L14.6 9.7C13.9 9.2 13 9.7 13 10.5Z" fill="white"/>
+
+  <!-- Sparkle -->
+  <path d="M24 6L24.5 7.5L26 8L24.5 8.5L24 10L23.5 8.5L22 8L23.5 7.5L24 6Z" fill="white" fill-opacity="0.9"/>
+</svg>

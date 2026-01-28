@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "encrypted_api_key" text;

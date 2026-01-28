@@ -20,6 +20,8 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   // Creator context for AI personalization
   userContext: text("user_context"),
+  // Encrypted Anthropic API key for BYOK
+  encryptedApiKey: text("encrypted_api_key"),
 });
 
 export const accounts = pgTable(

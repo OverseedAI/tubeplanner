@@ -55,7 +55,9 @@ Copy `.env.example` to `.env.local` and fill in:
 - `AUTH_SECRET` - NextAuth secret
 - `AUTH_GITHUB_ID/SECRET` - GitHub OAuth
 - `AUTH_GOOGLE_ID/SECRET` - Google OAuth
-- `ANTHROPIC_API_KEY` - Claude API key
+- `ENCRYPTION_KEY` - For encrypting user API keys (generate with: `openssl rand -hex 32`)
+
+Note: This is a BYOK (bring-your-own-key) app. Users provide their own Anthropic API key in their profile settings.
 
 ## Architecture Notes
 

@@ -1,10 +1,10 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { streamText } from "ai";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { videoPlans } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getUserContext, buildCreatorContextPrompt } from "@/lib/user-context";
+import { getUserAnthropicClient, ApiKeyError } from "@/lib/anthropic";
 
 const SECTION_LABELS: Record<string, string> = {
   idea: "Core Idea",
@@ -34,6 +34,20 @@ export async function POST(req: Request) {
 
   if (!planId || !contextSections || !Array.isArray(contextSections) || contextSections.length === 0 || !messages) {
     return new Response("Missing required fields", { status: 400 });
+  }
+
+  // Get user's Anthropic client
+  let anthropic;
+  try {
+    anthropic = await getUserAnthropicClient(session.user.id);
+  } catch (error) {
+    if (error instanceof ApiKeyError) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    throw error;
   }
 
   // Fetch the plan

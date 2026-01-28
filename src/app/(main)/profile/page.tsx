@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { UserContextEditor } from "@/components/user-context-editor";
-import { LogOut, Mail, User, Sparkles } from "lucide-react";
+import { ApiKeyEditor } from "@/components/api-key-editor";
+import { LogOut, Mail, User, Sparkles, Key } from "lucide-react";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -16,7 +17,10 @@ export default async function ProfilePage() {
   const { name, email, image } = session.user;
 
   const [user] = await db
-    .select({ userContext: users.userContext })
+    .select({
+      userContext: users.userContext,
+      encryptedApiKey: users.encryptedApiKey,
+    })
     .from(users)
     .where(eq(users.id, session.user.id));
 
@@ -63,6 +67,20 @@ export default async function ProfilePage() {
               <span className="text-sm">{email}</span>
             </div>
           </div>
+        </div>
+
+        <Separator className="my-6" />
+
+        {/* API Key */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Key className="w-4 h-4 text-red-500" />
+            <h3 className="text-sm font-medium text-zinc-500 uppercase tracking-wider">
+              API Key
+            </h3>
+          </div>
+
+          <ApiKeyEditor hasKey={!!user?.encryptedApiKey} />
         </div>
 
         <Separator className="my-6" />

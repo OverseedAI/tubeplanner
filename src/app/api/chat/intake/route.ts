@@ -1,10 +1,10 @@
-import { anthropic } from "@ai-sdk/anthropic";
-import { streamText } from "ai";
+import { streamText, generateText } from "ai";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { videoPlans } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getUserContext, buildCreatorContextPrompt } from "@/lib/user-context";
+import { getUserAnthropicClient, ApiKeyError } from "@/lib/anthropic";
 
 const SYSTEM_PROMPT = `You are a YouTube video planning assistant. Your job is to help creators plan compelling, well-structured videos that resonate with their audience.
 
@@ -32,6 +32,20 @@ export async function POST(req: Request) {
   }
 
   const { messages, planId } = await req.json();
+
+  // Get user's Anthropic client
+  let anthropic;
+  try {
+    anthropic = await getUserAnthropicClient(session.user.id);
+  } catch (error) {
+    if (error instanceof ApiKeyError) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    throw error;
+  }
 
   // Fetch creator context for personalization
   const userContext = await getUserContext(session.user.id);
@@ -108,7 +122,7 @@ This will trigger the plan generation and redirect them to view it.`
 
       // If plan was generated, also generate the actual plan content
       if (text.includes("[PLAN_GENERATED]")) {
-        await generatePlanContent(currentPlanId, session.user!.id!, updatedMessages, userContext);
+        await generatePlanContent(anthropic, currentPlanId, session.user!.id!, updatedMessages, userContext);
       }
 
       await db
@@ -128,6 +142,7 @@ This will trigger the plan generation and redirect them to view it.`
 }
 
 async function generatePlanContent(
+  anthropic: ReturnType<typeof import("@ai-sdk/anthropic").createAnthropic>,
   planId: string,
   userId: string,
   messages: { role: string; content: string }[],
@@ -141,8 +156,7 @@ async function generatePlanContent(
     ? `\nCREATOR CONTEXT:\n${userContext}\n\nUse this context to tailor the plan to match the creator's style and audience.`
     : "";
 
-  const { text } = await import("ai").then((m) =>
-    m.generateText({
+  const { text } = await generateText({
       model: anthropic("claude-sonnet-4-20250514"),
       system: `You are a YouTube video planning expert. Based on the intake conversation, generate a comprehensive video plan.
 ${creatorContextSection}
@@ -162,8 +176,7 @@ Output a JSON object with this exact structure:
 
 Make the plan actionable and specific. The hook should be compelling. The outline should have 4-7 sections with clear content for each. Thumbnail concepts should be visual and attention-grabbing. Titles should balance SEO with clickability.`,
       prompt: `Based on this intake conversation, generate a video plan:\n\n${conversationContext}`,
-    })
-  );
+    });
 
   try {
     // Extract JSON from the response

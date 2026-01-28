@@ -12,7 +12,6 @@ import {
   Sparkles,
   User,
   Check,
-  X,
   Lightbulb,
   Users,
   Zap,
@@ -52,7 +51,6 @@ interface ChatPanelProps {
   messages: Message[];
   onMessagesChange: (messages: Message[]) => void;
   onApply: (sectionKey: SectionKey, content: string) => void;
-  onClose: () => void;
 }
 
 export function ChatPanel({
@@ -62,7 +60,6 @@ export function ChatPanel({
   messages,
   onMessagesChange,
   onApply,
-  onClose,
 }: ChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -170,16 +167,11 @@ export function ChatPanel({
   };
 
   return (
-    <div className="w-[380px] border-l border-zinc-200 dark:border-zinc-800 flex flex-col bg-white dark:bg-zinc-950">
+    <div className="w-[380px] min-w-[380px] border-l border-zinc-200 dark:border-zinc-800 flex flex-col bg-white dark:bg-zinc-950 h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-red-500" />
-          <span className="font-semibold">AI Assistant</span>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-          <X className="w-4 h-4" />
-        </Button>
+      <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2">
+        <Sparkles className="w-5 h-5 text-red-500" />
+        <span className="font-semibold">AI Assistant</span>
       </div>
 
       {/* Messages */}

@@ -22,7 +22,8 @@ import {
   Sparkles,
   ArrowLeft,
   Loader2,
-  MessageSquare,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -51,8 +52,8 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Chat panel state
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  // Chat panel state - open by default
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [contextSections, setContextSections] = useState<SectionKey[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
 
@@ -152,10 +153,6 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
     await saveSection(sectionKey, parsedValue);
   };
 
-  const handleClosePanel = () => {
-    setIsPanelOpen(false);
-  };
-
   const renderSectionContent = (key: SectionKey) => {
     const value = plan[key];
 
@@ -234,50 +231,47 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
   const isInContext = (key: SectionKey) => contextSections.includes(key);
 
   return (
-    <div className="h-full flex">
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <div className="p-8 pb-4 border-b border-zinc-200 dark:border-zinc-800">
-          <div className="flex items-center gap-4 mb-4">
-            <Link href="/">
-              <Button variant="ghost" size="icon" className="rounded-xl">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-                  {plan.title}
-                </h1>
-                <Badge variant={plan.status === "complete" ? "default" : "secondary"}>
-                  {plan.status}
-                </Badge>
-              </div>
-              <p className="text-zinc-500 mt-1">
-                Created {new Date(plan.createdAt).toLocaleDateString()}
-              </p>
+    <div className="h-full flex flex-col">
+      {/* Header - spans full width */}
+      <div className="p-8 pb-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+        <div className="flex items-center gap-4">
+          <Link href="/">
+            <Button variant="ghost" size="icon" className="rounded-xl">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </Link>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+                {plan.title}
+              </h1>
+              <Badge variant={plan.status === "complete" ? "default" : "secondary"}>
+                {plan.status}
+              </Badge>
             </div>
-
-            {/* Toggle chat panel button when closed */}
-            {!isPanelOpen && (
-              <Button
-                variant="outline"
-                onClick={() => setIsPanelOpen(true)}
-                className="gap-2"
-              >
-                <MessageSquare className="w-4 h-4" />
-                AI Assistant
-                {contextSections.length > 0 && (
-                  <Badge variant="secondary" className="ml-1">
-                    {contextSections.length}
-                  </Badge>
-                )}
-              </Button>
-            )}
+            <p className="text-zinc-500 mt-1">
+              Created {new Date(plan.createdAt).toLocaleDateString()}
+            </p>
           </div>
-        </div>
 
+          {/* Toggle chat panel button */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsPanelOpen(!isPanelOpen)}
+            className="h-10 w-10"
+          >
+            {isPanelOpen ? (
+              <PanelRightClose className="w-5 h-5" />
+            ) : (
+              <PanelRightOpen className="w-5 h-5" />
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Content area - flex row with sections and panel */}
+      <div className="flex-1 flex overflow-hidden">
         {/* Sections */}
         <ScrollArea className="flex-1">
           <div className="p-8 max-w-4xl mx-auto">
@@ -329,20 +323,24 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
             </div>
           </div>
         </ScrollArea>
-      </div>
 
-      {/* Chat Panel */}
-      {isPanelOpen && (
-        <ChatPanel
-          planId={plan.id}
-          contextSections={contextSections}
-          onRemoveContext={handleRemoveContext}
-          messages={messages}
-          onMessagesChange={setMessages}
-          onApply={handleApply}
-          onClose={handleClosePanel}
-        />
-      )}
+        {/* Chat Panel - slides in/out */}
+        <div
+          className={cn(
+            "shrink-0 transition-all duration-300 ease-in-out overflow-hidden",
+            isPanelOpen ? "w-[380px]" : "w-0"
+          )}
+        >
+          <ChatPanel
+            planId={plan.id}
+            contextSections={contextSections}
+            onRemoveContext={handleRemoveContext}
+            messages={messages}
+            onMessagesChange={setMessages}
+            onApply={handleApply}
+          />
+        </div>
+      </div>
     </div>
   );
 }

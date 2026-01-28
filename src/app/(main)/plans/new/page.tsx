@@ -10,6 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useApiKey } from "@/hooks/use-api-key";
+import { ApiKeyModal } from "@/components/api-key-modal";
 
 interface Message {
   id: string;
@@ -30,6 +32,7 @@ function ThinkingIndicator() {
 export default function NewPlanPage() {
   const router = useRouter();
   const { data: session } = useSession();
+  const { hasKey, loading: checkingKey, refresh: refreshKeyStatus } = useApiKey();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [planId, setPlanId] = useState<string | null>(null);
@@ -41,6 +44,7 @@ export default function NewPlanPage() {
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
 
   const user = session?.user;
+  const showApiKeyModal = !checkingKey && hasKey === false;
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -198,6 +202,9 @@ export default function NewPlanPage() {
 
   return (
     <div className="flex flex-col h-full max-w-3xl mx-auto">
+      {/* API Key Modal */}
+      <ApiKeyModal open={showApiKeyModal} onSuccess={refreshKeyStatus} />
+
       {/* Header */}
       <div className="p-8 pb-4">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">

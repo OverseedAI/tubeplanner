@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { videoPlans } from "@/db/schema";
+import { videoPlans, users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { PlanViewer } from "@/components/plan-viewer";
 
@@ -23,5 +23,13 @@ export default async function PlanPage({ params }: PlanPageProps) {
 
   if (!plan) return notFound();
 
-  return <PlanViewer plan={plan} />;
+  // Check if user has API key
+  const [user] = await db
+    .select({ encryptedApiKey: users.encryptedApiKey })
+    .from(users)
+    .where(eq(users.id, session.user.id));
+
+  const hasApiKey = !!user?.encryptedApiKey;
+
+  return <PlanViewer plan={plan} initialHasApiKey={hasApiKey} />;
 }

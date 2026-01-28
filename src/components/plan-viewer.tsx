@@ -27,9 +27,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { ApiKeyModal } from "@/components/api-key-modal";
 
 interface PlanViewerProps {
   plan: VideoPlan;
+  initialHasApiKey: boolean;
 }
 
 const sections: {
@@ -46,11 +48,15 @@ const sections: {
   { key: "titleOptions", label: "Title Options", icon: Type, description: "Title variations" },
 ];
 
-export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
+export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerProps) {
   const [plan, setPlan] = useState(initialPlan);
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // API key state
+  const [hasApiKey, setHasApiKey] = useState(initialHasApiKey);
+  const showApiKeyModal = !hasApiKey;
 
   // Chat panel state - open by default
   const [isPanelOpen, setIsPanelOpen] = useState(true);
@@ -232,6 +238,9 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
 
   return (
     <div className="h-full flex flex-col">
+      {/* API Key Modal */}
+      <ApiKeyModal open={showApiKeyModal} onSuccess={() => setHasApiKey(true)} />
+
       {/* Header - spans full width */}
       <div className="p-8 pb-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
         <div className="flex items-center gap-4">

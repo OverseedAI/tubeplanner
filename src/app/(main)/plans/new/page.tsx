@@ -38,6 +38,7 @@ export default function NewPlanPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
 
   const user = session?.user;
 
@@ -132,7 +133,8 @@ export default function NewPlanPage() {
         if (assistantContent.includes("[PLAN_GENERATED]")) {
           const match = assistantContent.match(/\[PLAN_ID:([^\]]+)\]/);
           if (match) {
-            setTimeout(() => router.push(`/plans/${match[1]}`), 500);
+            setIsGeneratingPlan(true);
+            setTimeout(() => router.push(`/plans/${match[1]}`), 1500);
           }
         }
       } catch (err) {
@@ -167,6 +169,32 @@ export default function NewPlanPage() {
       .replace(/\[PLAN_ID:[^\]]+\]/g, "")
       .trim();
   };
+
+  // Full-screen transition overlay when plan is being generated
+  if (isGeneratingPlan) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full animate-in fade-in duration-300">
+        <div className="text-center space-y-6">
+          <div className="w-20 h-20 bg-red-500 rounded-2xl flex items-center justify-center mx-auto animate-pulse">
+            <Sparkles className="w-10 h-10 text-white" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+              Creating your video plan
+            </h2>
+            <p className="text-zinc-500">
+              Organizing your ideas into a structured plan...
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-1.5">
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-bounce" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full max-w-3xl mx-auto">

@@ -4,17 +4,8 @@ import { db } from "@/db";
 import { videoPlans } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Plus, FileVideo, Sparkles } from "lucide-react";
-
-const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-  intake: { label: "In Progress", variant: "secondary" },
-  generating: { label: "Generating", variant: "secondary" },
-  draft: { label: "Draft", variant: "outline" },
-  refining: { label: "Refining", variant: "secondary" },
-  complete: { label: "Complete", variant: "default" },
-};
+import { PlanCard } from "@/components/plan-card";
+import { Plus, Sparkles } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -51,36 +42,9 @@ export default async function DashboardPage() {
         <EmptyState />
       ) : (
         <div className="grid gap-4">
-          {plans.map((plan) => {
-            const status = statusLabels[plan.status] ?? statusLabels.draft;
-            return (
-              <Link key={plan.id} href={`/plans/${plan.id}`}>
-                <Card className="hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors cursor-pointer">
-                  <CardHeader className="flex flex-row items-center gap-4">
-                    <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center shrink-0">
-                      <FileVideo className="w-6 h-6 text-zinc-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
-                        <CardTitle className="text-lg truncate">
-                          {plan.title}
-                        </CardTitle>
-                        <Badge variant={status.variant}>{status.label}</Badge>
-                      </div>
-                      <CardDescription className="mt-1">
-                        {plan.idea
-                          ? plan.idea.slice(0, 120) + (plan.idea.length > 120 ? "..." : "")
-                          : "No description yet"}
-                      </CardDescription>
-                    </div>
-                    <div className="text-sm text-zinc-400 shrink-0">
-                      {formatDate(plan.updatedAt)}
-                    </div>
-                  </CardHeader>
-                </Card>
-              </Link>
-            );
-          })}
+          {plans.map((plan) => (
+            <PlanCard key={plan.id} plan={plan} />
+          ))}
         </div>
       )}
     </div>
@@ -108,19 +72,4 @@ function EmptyState() {
       </Link>
     </div>
   );
-}
-
-function formatDate(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
 }

@@ -23,7 +23,6 @@ import {
   ArrowLeft,
   Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 interface PlanViewerProps {
@@ -256,7 +255,7 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
           <div className="grid gap-6">
             {sections.map((section) => (
               <Card key={section.key}>
-                <CardHeader className="pb-3">
+                <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center">
@@ -290,7 +289,7 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
                   </div>
                 </CardHeader>
                 <Separator />
-                <CardContent className="pt-4">
+                <CardContent>
                   {renderSectionContent(section.key)}
                 </CardContent>
               </Card>

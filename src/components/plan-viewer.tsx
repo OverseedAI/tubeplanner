@@ -352,6 +352,7 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
             messages={messages}
             onMessagesChange={setMessages}
             onApply={handleApply}
+            intakeMessages={plan.intakeMessages || []}
             sectionConversations={plan.sectionConversations || {}}
             onConversationUpdate={handleConversationUpdate}
           />

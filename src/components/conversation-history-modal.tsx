@@ -21,20 +21,17 @@ interface Message {
 interface ConversationHistoryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  conversations: Record<string, Message[]>;
+  messages: Message[];
   planTitle: string;
 }
 
 export function ConversationHistoryModal({
   open,
   onOpenChange,
-  conversations,
+  messages,
   planTitle,
 }: ConversationHistoryModalProps) {
   const [copied, setCopied] = useState(false);
-
-  // Get the main conversation (single conversation per plan)
-  const messages = conversations["main"] || [];
 
   const exportAsText = () => {
     let text = `# Conversation History: ${planTitle}\n\n`;

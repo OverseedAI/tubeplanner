@@ -63,6 +63,7 @@ interface ChatPanelProps {
   messages: Message[];
   onMessagesChange: (messages: Message[]) => void;
   onApply: (sectionKey: SectionKey, content: string) => void;
+  intakeMessages: DbMessage[];
   sectionConversations: Record<string, DbMessage[]>;
   onConversationUpdate?: (conversations: Record<string, DbMessage[]>) => void;
 }
@@ -75,6 +76,7 @@ export function ChatPanel({
   messages,
   onMessagesChange,
   onApply,
+  intakeMessages,
   sectionConversations,
   onConversationUpdate,
 }: ChatPanelProps) {
@@ -86,8 +88,9 @@ export function ChatPanel({
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
-  // Get conversation history (single conversation per plan, keyed as "main")
-  const conversationHistory = sectionConversations["main"] || [];
+  // Unified conversation history: intake + refinement
+  const refinementHistory = sectionConversations["main"] || [];
+  const conversationHistory = [...intakeMessages, ...refinementHistory];
   const hasHistory = conversationHistory.length > 0;
   const showHistoryBanner = hasHistory && messages.length === 0 && !bannerDismissed;
 
@@ -430,11 +433,11 @@ export function ChatPanel({
         </form>
       </div>
 
-      {/* History Modal - Option A */}
+      {/* History Modal */}
       <ConversationHistoryModal
         open={historyModalOpen}
         onOpenChange={setHistoryModalOpen}
-        conversations={sectionConversations}
+        messages={conversationHistory}
         planTitle={planTitle}
       />
     </div>

@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Download, Copy, Check, Sparkles, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -65,8 +64,8 @@ export function ConversationHistoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
-        <DialogHeader className="shrink-0">
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Conversation History</DialogTitle>
             <div className="flex gap-2">
@@ -96,7 +95,7 @@ export function ConversationHistoryModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 overflow-hidden pr-4">
+        <div className="max-h-[60vh] overflow-y-auto pr-2">
           {messages.length === 0 ? (
             <div className="text-center py-12 text-zinc-500">
               <p>No conversation history yet</p>
@@ -105,7 +104,7 @@ export function ConversationHistoryModal({
               </p>
             </div>
           ) : (
-            <div className="space-y-3 py-4">
+            <div className="space-y-3 py-2">
               {messages.map((message, i) => (
                 <div
                   key={i}
@@ -149,7 +148,7 @@ export function ConversationHistoryModal({
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

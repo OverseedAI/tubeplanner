@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { RefineDialog } from "@/components/refine-dialog";
+import { ChatPanel, type SectionKey, type Message } from "@/components/chat-panel";
 import {
   Lightbulb,
   Users,
@@ -22,14 +22,14 @@ import {
   Sparkles,
   ArrowLeft,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface PlanViewerProps {
   plan: VideoPlan;
 }
-
-type SectionKey = "idea" | "targetAudience" | "hook" | "outline" | "thumbnailConcepts" | "titleOptions";
 
 const sections: {
   key: SectionKey;
@@ -50,7 +50,11 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
-  const [refineSection, setRefineSection] = useState<SectionKey | null>(null);
+
+  // Chat panel state
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [contextSections, setContextSections] = useState<SectionKey[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
 
   const startEditing = (key: SectionKey) => {
     const value = plan[key];
@@ -117,33 +121,39 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
     }
   };
 
-  const handleRefineApply = async (newContent: string) => {
-    if (!refineSection) return;
+  const handleEnhance = (key: SectionKey) => {
+    // Add section to context if not already there
+    if (!contextSections.includes(key)) {
+      setContextSections((prev) => [...prev, key]);
+    }
+    // Open panel if closed
+    if (!isPanelOpen) {
+      setIsPanelOpen(true);
+    }
+  };
 
+  const handleRemoveContext = (key: SectionKey) => {
+    setContextSections((prev) => prev.filter((s) => s !== key));
+  };
+
+  const handleApply = async (sectionKey: SectionKey, content: string) => {
     // Parse the content based on section type
     let parsedValue: string | string[];
-    if (refineSection === "titleOptions" || refineSection === "thumbnailConcepts") {
+    if (sectionKey === "titleOptions" || sectionKey === "thumbnailConcepts") {
       // Split by newlines, filter empties, clean up numbering
-      parsedValue = newContent
+      parsedValue = content
         .split("\n")
         .map((line) => line.replace(/^\d+\.\s*/, "").trim())
         .filter(Boolean);
     } else {
-      parsedValue = newContent;
+      parsedValue = content;
     }
 
-    await saveSection(refineSection, parsedValue);
+    await saveSection(sectionKey, parsedValue);
   };
 
-  const getSectionContentAsString = (key: SectionKey): string => {
-    const value = plan[key];
-    if (!value) return "";
-    if (Array.isArray(value)) {
-      return value.map((item) =>
-        typeof item === "string" ? item : `${item.title}: ${item.content}`
-      ).join("\n");
-    }
-    return String(value);
+  const handleClosePanel = () => {
+    setIsPanelOpen(false);
   };
 
   const renderSectionContent = (key: SectionKey) => {
@@ -221,93 +231,118 @@ export function PlanViewer({ plan: initialPlan }: PlanViewerProps) {
     return <p className="whitespace-pre-wrap leading-relaxed">{value}</p>;
   };
 
-  const currentRefineSection = sections.find((s) => s.key === refineSection);
+  const isInContext = (key: SectionKey) => contextSections.includes(key);
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-8 pb-4 border-b border-zinc-200 dark:border-zinc-800">
-        <div className="flex items-center gap-4 mb-4">
-          <Link href="/">
-            <Button variant="ghost" size="icon" className="rounded-xl">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-                {plan.title}
-              </h1>
-              <Badge variant={plan.status === "complete" ? "default" : "secondary"}>
-                {plan.status}
-              </Badge>
+    <div className="h-full flex">
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="p-8 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+          <div className="flex items-center gap-4 mb-4">
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="rounded-xl">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            </Link>
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+                  {plan.title}
+                </h1>
+                <Badge variant={plan.status === "complete" ? "default" : "secondary"}>
+                  {plan.status}
+                </Badge>
+              </div>
+              <p className="text-zinc-500 mt-1">
+                Created {new Date(plan.createdAt).toLocaleDateString()}
+              </p>
             </div>
-            <p className="text-zinc-500 mt-1">
-              Created {new Date(plan.createdAt).toLocaleDateString()}
-            </p>
+
+            {/* Toggle chat panel button when closed */}
+            {!isPanelOpen && (
+              <Button
+                variant="outline"
+                onClick={() => setIsPanelOpen(true)}
+                className="gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                AI Assistant
+                {contextSections.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">
+                    {contextSections.length}
+                  </Badge>
+                )}
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Sections */}
+        <ScrollArea className="flex-1">
+          <div className="p-8 max-w-4xl mx-auto">
+            <div className="grid gap-6">
+              {sections.map((section) => (
+                <Card key={section.key}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center">
+                          <section.icon className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg">{section.label}</CardTitle>
+                          <p className="text-sm text-zinc-500">{section.description}</p>
+                        </div>
+                      </div>
+                      {editingSection !== section.key && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditing(section.key)}
+                          >
+                            <Edit3 className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant={isInContext(section.key) ? "secondary" : "ghost"}
+                            size="sm"
+                            onClick={() => handleEnhance(section.key)}
+                            className={cn(
+                              isInContext(section.key) && "bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400"
+                            )}
+                          >
+                            <Sparkles className="w-4 h-4 mr-1" />
+                            {isInContext(section.key) ? "In Context" : "Enhance"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <Separator />
+                  <CardContent>
+                    {renderSectionContent(section.key)}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </ScrollArea>
       </div>
 
-      {/* Sections */}
-      <ScrollArea className="flex-1">
-        <div className="p-8 max-w-4xl mx-auto">
-          <div className="grid gap-6">
-            {sections.map((section) => (
-              <Card key={section.key}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center">
-                        <section.icon className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">{section.label}</CardTitle>
-                        <p className="text-sm text-zinc-500">{section.description}</p>
-                      </div>
-                    </div>
-                    {editingSection !== section.key && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => startEditing(section.key)}
-                        >
-                          <Edit3 className="w-4 h-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setRefineSection(section.key)}
-                        >
-                          <Sparkles className="w-4 h-4 mr-1" />
-                          Refine
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <Separator />
-                <CardContent>
-                  {renderSectionContent(section.key)}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </ScrollArea>
-
-      {/* Refine Dialog */}
-      <RefineDialog
-        open={refineSection !== null}
-        onOpenChange={(open) => !open && setRefineSection(null)}
-        planId={plan.id}
-        section={refineSection || ""}
-        sectionLabel={currentRefineSection?.label || ""}
-        currentContent={refineSection ? getSectionContentAsString(refineSection) : ""}
-        onApply={handleRefineApply}
-      />
+      {/* Chat Panel */}
+      {isPanelOpen && (
+        <ChatPanel
+          planId={plan.id}
+          contextSections={contextSections}
+          onRemoveContext={handleRemoveContext}
+          messages={messages}
+          onMessagesChange={setMessages}
+          onApply={handleApply}
+          onClose={handleClosePanel}
+        />
+      )}
     </div>
   );
 }

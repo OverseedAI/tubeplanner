@@ -6,13 +6,22 @@ import { videoPlans } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getUserContext, buildCreatorContextPrompt } from "@/lib/user-context";
 
+const SECTION_LABELS: Record<string, string> = {
+  idea: "Core Idea",
+  targetAudience: "Target Audience",
+  hook: "Hook & Intro",
+  outline: "Content Outline",
+  thumbnailConcepts: "Thumbnail Ideas",
+  titleOptions: "Title Options",
+};
+
 const SECTION_PROMPTS: Record<string, string> = {
-  idea: "You're helping refine the core video idea and value proposition.",
-  targetAudience: "You're helping define and refine the target audience description.",
-  hook: "You're helping craft a compelling hook/intro for the first 30 seconds.",
-  outline: "You're helping structure and refine the content outline.",
-  thumbnailConcepts: "You're helping brainstorm thumbnail visual concepts.",
-  titleOptions: "You're helping craft click-worthy, SEO-friendly title options.",
+  idea: "the core video idea and value proposition",
+  targetAudience: "the target audience description",
+  hook: "the compelling hook/intro for the first 30 seconds",
+  outline: "the content structure and outline",
+  thumbnailConcepts: "thumbnail visual concepts",
+  titleOptions: "click-worthy, SEO-friendly title options",
 };
 
 export async function POST(req: Request) {
@@ -21,9 +30,9 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const { planId, section, messages } = await req.json();
+  const { planId, contextSections, messages } = await req.json();
 
-  if (!planId || !section || !messages) {
+  if (!planId || !contextSections || !Array.isArray(contextSections) || contextSections.length === 0 || !messages) {
     return new Response("Missing required fields", { status: 400 });
   }
 
@@ -43,35 +52,37 @@ export async function POST(req: Request) {
   const userContext = await getUserContext(session.user.id);
   const creatorContext = buildCreatorContextPrompt(userContext);
 
-  // Build context from current plan state
-  const planContext = `
-CURRENT VIDEO PLAN STATE:
-- Title: ${plan.title}
-- Core Idea: ${plan.idea || "Not set"}
-- Target Audience: ${plan.targetAudience || "Not set"}
-- Hook: ${plan.hook || "Not set"}
-- Outline: ${plan.outline ? JSON.stringify(plan.outline, null, 2) : "Not set"}
-- Thumbnail Concepts: ${plan.thumbnailConcepts?.join(", ") || "Not set"}
-- Title Options: ${plan.titleOptions?.join(", ") || "Not set"}
+  // Build context for selected sections
+  const sectionsContext = contextSections.map((section: string) => {
+    const label = SECTION_LABELS[section] || section;
+    const content = plan[section as keyof typeof plan];
+    const contentStr = Array.isArray(content)
+      ? JSON.stringify(content, null, 2)
+      : content || "Empty";
+    return `## ${label}\n${contentStr}`;
+  }).join("\n\n");
 
-CURRENT ${section.toUpperCase()} CONTENT:
-${plan[section as keyof typeof plan] || "Empty"}
-`.trim();
+  const sectionDescriptions = contextSections.map(
+    (s: string) => SECTION_PROMPTS[s] || s
+  ).join(", ");
 
-  const sectionContext = SECTION_PROMPTS[section] || "You're helping refine this section.";
+  const systemPrompt = `You are a YouTube video planning assistant. You're helping refine: ${sectionDescriptions}.
 
-  const systemPrompt = `You are a YouTube video planning assistant. ${sectionContext}
 ${creatorContext}
-${planContext}
+
+CURRENT VIDEO PLAN:
+- Title: ${plan.title}
+
+SECTIONS IN CONTEXT:
+${sectionsContext}
 
 GUIDELINES:
 - Be concise and actionable
 - Build on the existing content, don't start from scratch
-- Consider how this section relates to the overall video plan
-- If they ask you to rewrite or change something, output the COMPLETE new version (not just the changes)
+- Consider how sections relate to each other and the overall video plan
+- If asked to rewrite or change something, output the COMPLETE new version (not just the changes)
 - Keep responses focused and practical
-
-When you provide updated content, format it clearly so the user can easily copy it.`;
+- When you provide updated content, format it clearly so the user can easily apply it`;
 
   // Stream the response
   const result = streamText({
@@ -79,10 +90,11 @@ When you provide updated content, format it clearly so the user can easily copy 
     system: systemPrompt,
     messages,
     async onFinish({ text }) {
-      // Save the conversation to the plan's section conversations
+      // Save the conversation with context sections info
+      const conversationKey = contextSections.sort().join(",");
       const updatedConversations = {
         ...(plan.sectionConversations || {}),
-        [section]: [
+        [conversationKey]: [
           ...messages,
           { role: "assistant", content: text, createdAt: new Date().toISOString() },
         ],

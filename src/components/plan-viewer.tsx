@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { VideoPlan, OutlineItem } from "@/db/schema";
+import type { VideoPlan, OutlineItem, Hook, HookStyle } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ChatPanel, type SectionKey, type Message } from "@/components/chat-panel";
 import {
   Lightbulb,
@@ -25,11 +26,22 @@ import {
   PanelRightClose,
   PanelRightOpen,
   History,
+  BookOpen,
+  HelpCircle,
+  Flame,
+  MessageCircleQuestion,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ApiKeyModal } from "@/components/api-key-modal";
 import { ConversationHistoryModal } from "@/components/conversation-history-modal";
+
+const hookStyleConfig: Record<HookStyle, { label: string; icon: React.ComponentType<{ className?: string }>; description: string }> = {
+  story: { label: "Story", icon: BookOpen, description: "Personal anecdote" },
+  curiosity: { label: "Curiosity", icon: HelpCircle, description: "Open loop" },
+  bold: { label: "Bold", icon: Flame, description: "Contrarian take" },
+  question: { label: "Question", icon: MessageCircleQuestion, description: "Direct engagement" },
+};
 
 interface PlanViewerProps {
   plan: VideoPlan;
@@ -44,7 +56,7 @@ const sections: {
 }[] = [
   { key: "idea", label: "Core Idea", icon: Lightbulb, description: "The video concept and value" },
   { key: "targetAudience", label: "Target Audience", icon: Users, description: "Who this is for" },
-  { key: "hook", label: "Hook & Intro", icon: Zap, description: "First 30 seconds" },
+  { key: "hooks", label: "Hook & Intro", icon: Zap, description: "First 30 seconds" },
   { key: "outline", label: "Content Outline", icon: List, description: "Structure and flow" },
   { key: "thumbnailConcepts", label: "Thumbnail Ideas", icon: Image, description: "Visual concepts" },
   { key: "titleOptions", label: "Title Options", icon: Type, description: "Title variations" },
@@ -73,10 +85,13 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
   const hasHistory = conversationHistory.length > 0;
 
   const startEditing = (key: SectionKey) => {
+    // Hooks are edited via the tabbed UI, not bulk text editing
+    if (key === "hooks") return;
+
     const value = plan[key];
     if (Array.isArray(value)) {
       setEditValue(value.map((item) =>
-        typeof item === "string" ? item : `${item.title}: ${item.content}`
+        typeof item === "string" ? item : `${(item as OutlineItem).title}: ${(item as OutlineItem).content}`
       ).join("\n"));
     } else {
       setEditValue(value ?? "");
@@ -172,6 +187,18 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
     setPlan((prev) => ({ ...prev, sectionConversations: conversations }));
   };
 
+  const handleSelectHook = async (style: HookStyle) => {
+    const hooks = plan.hooks;
+    if (!hooks) return;
+
+    const updatedHooks = hooks.map((hook) => ({
+      ...hook,
+      selected: hook.style === style,
+    }));
+
+    await saveSection("hooks", updatedHooks);
+  };
+
   const renderSectionContent = (key: SectionKey) => {
     const value = plan[key];
 
@@ -227,6 +254,64 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
             </div>
           ))}
         </div>
+      );
+    }
+
+    if (key === "hooks" && Array.isArray(value)) {
+      const hooks = value as Hook[];
+      const selectedHook = hooks.find((h) => h.selected) || hooks[0];
+      const defaultTab = selectedHook?.style || "story";
+
+      return (
+        <Tabs defaultValue={defaultTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
+            {hooks.map((hook) => {
+              const config = hookStyleConfig[hook.style];
+              const Icon = config.icon;
+              return (
+                <TabsTrigger
+                  key={hook.style}
+                  value={hook.style}
+                  className={cn(
+                    "flex items-center gap-1.5 text-xs",
+                    hook.selected && "ring-2 ring-red-500 ring-offset-1"
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {config.label}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+
+          {hooks.map((hook) => {
+            const config = hookStyleConfig[hook.style];
+            return (
+              <TabsContent key={hook.style} value={hook.style} className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-zinc-500">
+                  <span>{config.description}</span>
+                  {hook.selected && (
+                    <Badge variant="secondary" className="text-xs bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400">
+                      Selected
+                    </Badge>
+                  )}
+                </div>
+                <p className="whitespace-pre-wrap leading-relaxed">{hook.content}</p>
+                {!hook.selected && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectHook(hook.style)}
+                    className="mt-2"
+                  >
+                    <Check className="w-4 h-4 mr-1" />
+                    Use this hook
+                  </Button>
+                )}
+              </TabsContent>
+            );
+          })}
+        </Tabs>
       );
     }
 
@@ -327,14 +412,16 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
                       </div>
                       {editingSection !== section.key && (
                         <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => startEditing(section.key)}
-                          >
-                            <Edit3 className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
+                          {section.key !== "hooks" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => startEditing(section.key)}
+                            >
+                              <Edit3 className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                          )}
                           <Button
                             variant={isInContext(section.key) ? "secondary" : "ghost"}
                             size="sm"

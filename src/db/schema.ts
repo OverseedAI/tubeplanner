@@ -92,7 +92,7 @@ export const videoPlans = pgTable("video_plans", {
   // Generated plan sections
   idea: text("idea"),
   targetAudience: text("target_audience"),
-  hook: text("hook"),
+  hooks: jsonb("hooks").$type<Hook[]>(),
   outline: jsonb("outline").$type<OutlineItem[]>(),
   thumbnailConcepts: jsonb("thumbnail_concepts").$type<string[]>(),
   titleOptions: jsonb("title_options").$type<string[]>(),
@@ -111,6 +111,14 @@ export type Message = {
   role: "user" | "assistant";
   content: string;
   createdAt?: string;
+};
+
+export type HookStyle = "story" | "curiosity" | "bold" | "question";
+
+export type Hook = {
+  style: HookStyle;
+  content: string;
+  selected?: boolean;
 };
 
 export type OutlineItem = {

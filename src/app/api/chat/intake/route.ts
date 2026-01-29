@@ -165,7 +165,12 @@ Output a JSON object with this exact structure:
   "title": "Working title for the video",
   "idea": "2-3 sentence summary of the video concept and its core value proposition",
   "targetAudience": "Description of the ideal viewer - their situation, needs, and what they'll gain",
-  "hook": "The opening hook/intro (first 30 seconds). Include the pattern interrupt, the promise, and why viewers should keep watching",
+  "hooks": [
+    {"style": "story", "content": "A personal anecdote hook - start with a brief story that relates to the topic", "selected": true},
+    {"style": "curiosity", "content": "An open loop hook - create intrigue that makes viewers need to keep watching"},
+    {"style": "bold", "content": "A contrarian/bold claim hook - challenge conventional wisdom or make a surprising statement"},
+    {"style": "question", "content": "A direct question hook - engage viewers by asking something that resonates with their situation"}
+  ],
   "outline": [
     {"id": "1", "title": "Section name", "content": "What to cover in this section", "duration": "estimated time"},
     ...
@@ -174,7 +179,7 @@ Output a JSON object with this exact structure:
   "titleOptions": ["Title option 1", "Title option 2", "Title option 3"]
 }
 
-Make the plan actionable and specific. The hook should be compelling. The outline should have 4-7 sections with clear content for each. Thumbnail concepts should be visual and attention-grabbing. Titles should balance SEO with clickability.`,
+Make the plan actionable and specific. Generate 4 distinct hook variations - each should be compelling and ready to use as the video's opening 30 seconds. The outline should have 4-7 sections with clear content for each. Thumbnail concepts should be visual and attention-grabbing. Titles should balance SEO with clickability.`,
       prompt: `Based on this intake conversation, generate a video plan:\n\n${conversationContext}`,
     });
 
@@ -191,7 +196,7 @@ Make the plan actionable and specific. The hook should be compelling. The outlin
         title: plan.title,
         idea: plan.idea,
         targetAudience: plan.targetAudience,
-        hook: plan.hook,
+        hooks: plan.hooks,
         outline: plan.outline,
         thumbnailConcepts: plan.thumbnailConcepts,
         titleOptions: plan.titleOptions,

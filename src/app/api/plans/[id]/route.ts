@@ -46,7 +46,7 @@ export async function PATCH(
     "title",
     "idea",
     "targetAudience",
-    "hook",
+    "hooks",
     "outline",
     "thumbnailConcepts",
     "titleOptions",

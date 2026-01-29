@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type SectionKey = "idea" | "targetAudience" | "hook" | "outline" | "thumbnailConcepts" | "titleOptions";
+export type SectionKey = "idea" | "targetAudience" | "hooks" | "outline" | "thumbnailConcepts" | "titleOptions";
 
 export interface Message {
   id: string;
@@ -47,7 +47,7 @@ interface SectionConfig {
 const sectionConfigs: SectionConfig[] = [
   { key: "idea", label: "Core Idea", icon: Lightbulb },
   { key: "targetAudience", label: "Target Audience", icon: Users },
-  { key: "hook", label: "Hook & Intro", icon: Zap },
+  { key: "hooks", label: "Hook & Intro", icon: Zap },
   { key: "outline", label: "Content Outline", icon: List },
   { key: "thumbnailConcepts", label: "Thumbnail Ideas", icon: Image },
   { key: "titleOptions", label: "Title Options", icon: Type },

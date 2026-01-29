@@ -9,7 +9,7 @@ import { getUserAnthropicClient, ApiKeyError } from "@/lib/anthropic";
 const SECTION_LABELS: Record<string, string> = {
   idea: "Core Idea",
   targetAudience: "Target Audience",
-  hook: "Hook & Intro",
+  hooks: "Hook & Intro",
   outline: "Content Outline",
   thumbnailConcepts: "Thumbnail Ideas",
   titleOptions: "Title Options",
@@ -18,7 +18,7 @@ const SECTION_LABELS: Record<string, string> = {
 const SECTION_PROMPTS: Record<string, string> = {
   idea: "the core video idea and value proposition",
   targetAudience: "the target audience description",
-  hook: "the compelling hook/intro for the first 30 seconds",
+  hooks: "the 4 hook variations for the first 30 seconds",
   outline: "the content structure and outline",
   thumbnailConcepts: "thumbnail visual concepts",
   titleOptions: "click-worthy, SEO-friendly title options",
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   }
 
   // If no sections specified, include all sections
-  const allSections = ["idea", "targetAudience", "hook", "outline", "thumbnailConcepts", "titleOptions"];
+  const allSections = ["idea", "targetAudience", "hooks", "outline", "thumbnailConcepts", "titleOptions"];
   const sectionsToInclude = contextSections.length > 0 ? contextSections : allSections;
 
   // Get user's Anthropic client

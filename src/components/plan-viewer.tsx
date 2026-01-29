@@ -30,6 +30,7 @@ import {
   HelpCircle,
   Flame,
   MessageCircleQuestion,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -67,6 +68,7 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [regenerating, setRegenerating] = useState<SectionKey | null>(null);
 
   // API key state
   const [hasApiKey, setHasApiKey] = useState(initialHasApiKey);
@@ -197,6 +199,26 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
     }));
 
     await saveSection("hooks", updatedHooks);
+  };
+
+  const handleRegenerate = async (key: SectionKey) => {
+    setRegenerating(key);
+    try {
+      const response = await fetch(`/api/plans/${plan.id}/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: key }),
+      });
+
+      if (!response.ok) throw new Error("Failed to regenerate");
+
+      const data = await response.json();
+      setPlan((prev) => ({ ...prev, [key]: data[key] }));
+    } catch (error) {
+      console.error("Failed to regenerate:", error);
+    } finally {
+      setRegenerating(null);
+    }
   };
 
   const renderSectionContent = (key: SectionKey) => {
@@ -412,6 +434,15 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
                       </div>
                       {editingSection !== section.key && (
                         <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRegenerate(section.key)}
+                            disabled={regenerating === section.key}
+                          >
+                            <RefreshCw className={cn("w-4 h-4 mr-1", regenerating === section.key && "animate-spin")} />
+                            {regenerating === section.key ? "Regenerating..." : "Regenerate"}
+                          </Button>
                           {section.key !== "hooks" && (
                             <Button
                               variant="ghost"

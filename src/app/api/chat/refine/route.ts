@@ -11,8 +11,7 @@ const SECTION_LABELS: Record<string, string> = {
   targetAudience: "Target Audience",
   hooks: "Hook & Intro",
   outline: "Content Outline",
-  thumbnailConcepts: "Thumbnail Ideas",
-  titleOptions: "Title Options",
+  ctrCombos: "CTR Combos",
 };
 
 const SECTION_PROMPTS: Record<string, string> = {
@@ -20,8 +19,7 @@ const SECTION_PROMPTS: Record<string, string> = {
   targetAudience: "the target audience description",
   hooks: "the 4 hook variations for the first 30 seconds",
   outline: "the content structure and outline",
-  thumbnailConcepts: "thumbnail visual concepts",
-  titleOptions: "click-worthy, SEO-friendly title options",
+  ctrCombos: "title/thumbnail combo pairs optimized for click-through rate",
 };
 
 export async function POST(req: Request) {
@@ -37,7 +35,7 @@ export async function POST(req: Request) {
   }
 
   // If no sections specified, include all sections
-  const allSections = ["idea", "targetAudience", "hooks", "outline", "thumbnailConcepts", "titleOptions"];
+  const allSections = ["idea", "targetAudience", "hooks", "outline", "ctrCombos"];
   const sectionsToInclude = contextSections.length > 0 ? contextSections : allSections;
 
   // Get user's Anthropic client

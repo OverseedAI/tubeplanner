@@ -17,13 +17,12 @@ import {
   Zap,
   List,
   Image,
-  Type,
   MessageSquare,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type SectionKey = "idea" | "targetAudience" | "hooks" | "outline" | "thumbnailConcepts" | "titleOptions";
+export type SectionKey = "idea" | "targetAudience" | "hooks" | "outline" | "ctrCombos";
 
 export interface Message {
   id: string;
@@ -49,8 +48,7 @@ const sectionConfigs: SectionConfig[] = [
   { key: "targetAudience", label: "Target Audience", icon: Users },
   { key: "hooks", label: "Hook & Intro", icon: Zap },
   { key: "outline", label: "Content Outline", icon: List },
-  { key: "thumbnailConcepts", label: "Thumbnail Ideas", icon: Image },
-  { key: "titleOptions", label: "Title Options", icon: Type },
+  { key: "ctrCombos", label: "CTR Combos", icon: Image },
 ];
 
 interface ChatPanelProps {

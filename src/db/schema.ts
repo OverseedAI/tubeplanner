@@ -94,8 +94,7 @@ export const videoPlans = pgTable("video_plans", {
   targetAudience: text("target_audience"),
   hooks: jsonb("hooks").$type<Hook[]>(),
   outline: jsonb("outline").$type<OutlineItem[]>(),
-  thumbnailConcepts: jsonb("thumbnail_concepts").$type<string[]>(),
-  titleOptions: jsonb("title_options").$type<string[]>(),
+  ctrCombos: jsonb("ctr_combos").$type<CtrCombo[]>(),
 
   // Section refinement conversations (keyed by section name)
   sectionConversations: jsonb("section_conversations")
@@ -126,6 +125,18 @@ export type OutlineItem = {
   title: string;
   content: string;
   duration?: string;
+};
+
+export type CtrCombo = {
+  id: string;
+  title: string;
+  thumbnail: string;
+  ratings: {
+    curiosity: number;
+    clarity: number;
+    emotion: number;
+  };
+  selected?: boolean;
 };
 
 export type VideoPlan = typeof videoPlans.$inferSelect;

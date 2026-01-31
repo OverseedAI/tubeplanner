@@ -175,11 +175,35 @@ Output a JSON object with this exact structure:
     {"id": "1", "title": "Section name", "content": "What to cover in this section", "duration": "estimated time"},
     ...
   ],
-  "thumbnailConcepts": ["Concept 1 description", "Concept 2 description", "Concept 3 description"],
-  "titleOptions": ["Title option 1", "Title option 2", "Title option 3"]
+  "ctrCombos": [
+    {
+      "id": "1",
+      "title": "Click-worthy title that pairs with the thumbnail",
+      "thumbnail": "Visual concept description - what the thumbnail shows, composition, text overlay if any",
+      "ratings": {"curiosity": 4, "clarity": 5, "emotion": 3},
+      "selected": true
+    },
+    {
+      "id": "2",
+      "title": "Alternative title option",
+      "thumbnail": "Different visual approach for the thumbnail",
+      "ratings": {"curiosity": 5, "clarity": 4, "emotion": 4}
+    },
+    {
+      "id": "3",
+      "title": "Third title variation",
+      "thumbnail": "Third thumbnail concept",
+      "ratings": {"curiosity": 3, "clarity": 5, "emotion": 5}
+    }
+  ]
 }
 
-Make the plan actionable and specific. Generate 4 distinct hook variations - each should be compelling and ready to use as the video's opening 30 seconds. The outline should have 4-7 sections with clear content for each. Thumbnail concepts should be visual and attention-grabbing. Titles should balance SEO with clickability.`,
+Make the plan actionable and specific. Generate 4 distinct hook variations - each should be compelling and ready to use as the video's opening 30 seconds. The outline should have 4-7 sections with clear content for each.
+
+For CTR combos: Title and thumbnail work as a PAIR - evaluate them together. Rate each combo on:
+- Curiosity (1-5): Does it create an open loop or curiosity gap?
+- Clarity (1-5): Is the value proposition immediately clear?
+- Emotion (1-5): Does it trigger an emotional response?`,
       prompt: `Based on this intake conversation, generate a video plan:\n\n${conversationContext}`,
     });
 
@@ -198,8 +222,7 @@ Make the plan actionable and specific. Generate 4 distinct hook variations - eac
         targetAudience: plan.targetAudience,
         hooks: plan.hooks,
         outline: plan.outline,
-        thumbnailConcepts: plan.thumbnailConcepts,
-        titleOptions: plan.titleOptions,
+        ctrCombos: plan.ctrCombos,
         status: "draft",
         updatedAt: new Date(),
       })

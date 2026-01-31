@@ -31,13 +31,23 @@ Output a JSON array with this exact structure:
   ...
 ]`,
 
-  thumbnailConcepts: `Generate 3 thumbnail visual concepts that would grab attention.
-Output a JSON array of strings:
-["Concept 1 description", "Concept 2 description", "Concept 3 description"]`,
-
-  titleOptions: `Generate 3 title options that balance SEO with clickability.
-Output a JSON array of strings:
-["Title option 1", "Title option 2", "Title option 3"]`,
+  ctrCombos: `Generate 3 title/thumbnail combo pairs optimized for CTR.
+Title and thumbnail work as a PAIR - they should complement each other, not repeat.
+Output a JSON array with this exact structure:
+[
+  {
+    "id": "1",
+    "title": "Click-worthy title",
+    "thumbnail": "Visual concept description - composition, elements, text overlay if any",
+    "ratings": {"curiosity": 4, "clarity": 5, "emotion": 3},
+    "selected": true
+  },
+  ...
+]
+Rate each combo on:
+- Curiosity (1-5): Does it create an open loop or curiosity gap?
+- Clarity (1-5): Is the value proposition immediately clear?
+- Emotion (1-5): Does it trigger an emotional response?`,
 };
 
 export async function POST(
@@ -121,7 +131,7 @@ ${SECTION_PROMPTS[section]}`;
     // Parse the result based on section type
     let parsedValue: unknown;
 
-    if (section === "hooks" || section === "outline" || section === "thumbnailConcepts" || section === "titleOptions") {
+    if (section === "hooks" || section === "outline" || section === "ctrCombos") {
       // Extract JSON from response
       const jsonMatch = text.match(/\[[\s\S]*\]/);
       if (jsonMatch) {

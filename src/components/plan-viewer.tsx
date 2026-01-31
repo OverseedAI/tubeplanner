@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { VideoPlan, OutlineItem, Hook, HookStyle } from "@/db/schema";
+import type { VideoPlan, OutlineItem, Hook, HookStyle, CtrCombo } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,6 @@ import {
   Zap,
   List,
   Image,
-  Type,
   Edit3,
   Check,
   X,
@@ -31,6 +30,7 @@ import {
   Flame,
   MessageCircleQuestion,
   RefreshCw,
+  MousePointerClick,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -43,6 +43,20 @@ const hookStyleConfig: Record<HookStyle, { label: string; icon: React.ComponentT
   bold: { label: "Bold", icon: Flame, description: "Contrarian take" },
   question: { label: "Question", icon: MessageCircleQuestion, description: "Direct engagement" },
 };
+
+function RatingBadge({ label, value }: { label: string; value: number }) {
+  const getColor = (v: number) => {
+    if (v >= 4) return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950";
+    if (v >= 3) return "text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950";
+    return "text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800";
+  };
+
+  return (
+    <div className={cn("px-2 py-1 rounded-md text-xs font-medium", getColor(value))}>
+      {label}: {value}/5
+    </div>
+  );
+}
 
 interface PlanViewerProps {
   plan: VideoPlan;
@@ -59,8 +73,7 @@ const sections: {
   { key: "targetAudience", label: "Target Audience", icon: Users, description: "Who this is for" },
   { key: "hooks", label: "Hook & Intro", icon: Zap, description: "First 30 seconds" },
   { key: "outline", label: "Content Outline", icon: List, description: "Structure and flow" },
-  { key: "thumbnailConcepts", label: "Thumbnail Ideas", icon: Image, description: "Visual concepts" },
-  { key: "titleOptions", label: "Title Options", icon: Type, description: "Title variations" },
+  { key: "ctrCombos", label: "CTR Combos", icon: MousePointerClick, description: "Title + thumbnail pairs" },
 ];
 
 export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerProps) {
@@ -87,8 +100,8 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
   const hasHistory = conversationHistory.length > 0;
 
   const startEditing = (key: SectionKey) => {
-    // Hooks are edited via the tabbed UI, not bulk text editing
-    if (key === "hooks") return;
+    // Hooks and CTR combos are edited via the tabbed UI, not bulk text editing
+    if (key === "hooks" || key === "ctrCombos") return;
 
     const value = plan[key];
     if (Array.isArray(value)) {
@@ -130,11 +143,9 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
   const saveEdit = async () => {
     if (!editingSection) return;
 
-    let newValue: string | string[] | { id: string; title: string; content: string; duration?: string }[];
+    let newValue: string | { id: string; title: string; content: string; duration?: string }[];
 
-    if (editingSection === "titleOptions" || editingSection === "thumbnailConcepts") {
-      newValue = editValue.split("\n").filter(Boolean);
-    } else if (editingSection === "outline") {
+    if (editingSection === "outline") {
       newValue = editValue.split("\n").filter(Boolean).map((line, i) => {
         const [title, ...contentParts] = line.split(":");
         return {
@@ -170,19 +181,9 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
   };
 
   const handleApply = async (sectionKey: SectionKey, content: string) => {
-    // Parse the content based on section type
-    let parsedValue: string | string[];
-    if (sectionKey === "titleOptions" || sectionKey === "thumbnailConcepts") {
-      // Split by newlines, filter empties, clean up numbering
-      parsedValue = content
-        .split("\n")
-        .map((line) => line.replace(/^\d+\.\s*/, "").trim())
-        .filter(Boolean);
-    } else {
-      parsedValue = content;
-    }
-
-    await saveSection(sectionKey, parsedValue);
+    // For most sections, just apply the content directly
+    // Complex sections like hooks and ctrCombos should be regenerated rather than applied from chat
+    await saveSection(sectionKey, content);
   };
 
   const handleConversationUpdate = (conversations: Record<string, { role: "user" | "assistant"; content: string; createdAt?: string }[]>) => {
@@ -199,6 +200,18 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
     }));
 
     await saveSection("hooks", updatedHooks);
+  };
+
+  const handleSelectCombo = async (id: string) => {
+    const combos = plan.ctrCombos;
+    if (!combos) return;
+
+    const updatedCombos = combos.map((combo) => ({
+      ...combo,
+      selected: combo.id === id,
+    }));
+
+    await saveSection("ctrCombos", updatedCombos);
   };
 
   const handleRegenerate = async (key: SectionKey) => {
@@ -337,21 +350,80 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
       );
     }
 
-    if (Array.isArray(value)) {
-      const stringItems = value as string[];
+    if (key === "ctrCombos" && Array.isArray(value)) {
+      const combos = value as CtrCombo[];
+      const selectedCombo = combos.find((c) => c.selected) || combos[0];
+      const defaultTab = selectedCombo?.id || "1";
+
       return (
-        <ul className="space-y-2">
-          {stringItems.map((item, i) => (
-            <li key={i} className="flex gap-2 items-start">
-              <span className="text-zinc-400 shrink-0">{i + 1}.</span>
-              <span>{item}</span>
-            </li>
+        <Tabs defaultValue={defaultTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            {combos.map((combo, i) => (
+              <TabsTrigger
+                key={combo.id}
+                value={combo.id}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs",
+                  combo.selected && "ring-2 ring-red-500 ring-offset-1"
+                )}
+              >
+                Option {i + 1}
+                {combo.selected && <Check className="w-3 h-3 ml-1" />}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {combos.map((combo) => (
+            <TabsContent key={combo.id} value={combo.id} className="space-y-4">
+              {/* Title */}
+              <div>
+                <p className="text-xs text-zinc-500 mb-1">Title</p>
+                <p className="font-medium text-lg">{combo.title}</p>
+              </div>
+
+              {/* Thumbnail */}
+              <div>
+                <p className="text-xs text-zinc-500 mb-1">Thumbnail Concept</p>
+                <div className="p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Image className="w-4 h-4 text-zinc-400" />
+                    <span className="text-sm text-zinc-500">Visual concept</span>
+                  </div>
+                  <p className="text-sm">{combo.thumbnail}</p>
+                </div>
+              </div>
+
+              {/* Ratings */}
+              <div className="flex gap-4">
+                <RatingBadge label="Curiosity" value={combo.ratings.curiosity} />
+                <RatingBadge label="Clarity" value={combo.ratings.clarity} />
+                <RatingBadge label="Emotion" value={combo.ratings.emotion} />
+              </div>
+
+              {!combo.selected && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSelectCombo(combo.id)}
+                  className="mt-2"
+                >
+                  <Check className="w-4 h-4 mr-1" />
+                  Use this combo
+                </Button>
+              )}
+              {combo.selected && (
+                <Badge variant="secondary" className="bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400">
+                  Selected
+                </Badge>
+              )}
+            </TabsContent>
           ))}
-        </ul>
+        </Tabs>
       );
     }
 
-    return <p className="whitespace-pre-wrap leading-relaxed">{value}</p>;
+    // For text sections (idea, targetAudience)
+    return <p className="whitespace-pre-wrap leading-relaxed">{value as string}</p>;
   };
 
   const isInContext = (key: SectionKey) => contextSections.includes(key);
@@ -443,7 +515,7 @@ export function PlanViewer({ plan: initialPlan, initialHasApiKey }: PlanViewerPr
                             <RefreshCw className={cn("w-4 h-4 mr-1", regenerating === section.key && "animate-spin")} />
                             {regenerating === section.key ? "Regenerating..." : "Regenerate"}
                           </Button>
-                          {section.key !== "hooks" && (
+                          {section.key !== "hooks" && section.key !== "ctrCombos" && (
                             <Button
                               variant="ghost"
                               size="sm"

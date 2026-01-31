@@ -48,8 +48,7 @@ export async function PATCH(
     "targetAudience",
     "hooks",
     "outline",
-    "thumbnailConcepts",
-    "titleOptions",
+    "ctrCombos",
     "status",
   ];
 
